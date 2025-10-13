@@ -1,0 +1,114 @@
+/* ==========================================================================
+   File Path: src/index.css
+   نسخه‌ نهایی و اصلاح‌شده‌ مطابق با پالت لوکس شریف‌گلد
+   ========================================================================== */
+
+/* 1. Font Imports (فونت فارسی و لاتین با حس اشرافی) */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&display=swap');
+@import url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css');
+
+/* 2. TailwindCSS Directives — باید در کل بالای فایل باشند */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 3. Global Styling + CSS Variables */
+@layer base {
+  :root {
+    /* ======= پالت اصلی لوکس ======= */
+    --color-background: #0E0C0A;          /* مشکی قهوه‌ای – حس عمیق و اشرافی */
+    --color-surface: #1A1816;             /* سطح دوم، تیره‌ و گرم‌تر */
+    --color-off-white: #F5F3EF;           /* سفید عاجی */
+    --color-text-on-dark: #EAE7DC;        /* متن روی پس‌زمینه تیره */
+    --color-text-primary: #1A1A1A;        /* متن اصلی روی پس‌زمینه روشن */
+    --color-text-secondary: #676767;      /* متن ثانویه */
+    --color-accent-gold: #D4AF37;         /* طلایی اشرافی */
+    --color-accent-red: #8B0000;          /* قرمز تیره سلطنتی */
+    --color-border: #2A2A2A;              /* لبه‌ها و جداسازها */
+    --color-shadow: rgba(0, 0, 0, 0.6);
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-text-on-dark);
+    font-family: 'Vazirmatn', sans-serif;
+    font-feature-settings: "kern";
+    min-height: 100vh;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 700;
+    color: var(--color-accent-gold);
+    letter-spacing: 0.02em;
+  }
+
+  a {
+    color: var(--color-accent-gold);
+    text-decoration: none;
+    transition: color 0.3s ease;
+  }
+
+  a:hover {
+    color: var(--color-off-white);
+  }
+}
+
+/* 4. Utility & Custom Classes */
+@layer utilities {
+  /* سایه‌ی متن لوکس */
+  .text-shadow {
+    text-shadow: 1px 1px 3px var(--color-shadow);
+  }
+  .text-shadow-md {
+    text-shadow: 2px 3px 8px var(--color-shadow);
+  }
+  .text-shadow-lg {
+    text-shadow: 4px 4px 15px var(--color-shadow);
+  }
+
+  /* افکت طلایی */
+  .gold-gradient {
+    background: linear-gradient(90deg, #B8860B 0%, #FFD700 50%, #D4AF37 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* پس‌زمینه ویدیو برای صفحات معرفی برند */
+  .video-background {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: translate(-50%, -50%);
+    z-index: -1;
+    opacity: 0.9;
+  }
+
+  /* افکت‌های حرکتی عمومی */
+  .fade-in-up {
+    animation: fadeInUp 0.6s ease-out;
+  }
+
+  @keyframes fadeInUp {
+    0% {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* ========================================================================== */
+/* پایان فایل: index.css */

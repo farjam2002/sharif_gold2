@@ -1,0 +1,63 @@
+/* src/components/Footer.css */
+.footer-container {
+  background-color: var(--color-background);
+  color: var(--color-text-secondary);
+  border-top: 1px solid var(--color-border);
+  padding: 2rem 5%; /* پدینگ بیشتر برای حس بهتر */
+  font-family: 'Vazirmatn', sans-serif;
+  font-size: 0.9rem;
+}
+
+.footer-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap; /* برای ریسپانسیو بودن */
+  gap: 1.5rem; /* فاصله بین المان‌ها */
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.footer-logo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.footer-links {
+  display: flex;
+  gap: 2rem;
+}
+
+.footer-links a {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.footer-links a:hover {
+  color: var(--color-accent-gold);
+}
+
+.footer-copyright {
+  text-align: center;
+  width: 100%;
+  margin-top: 1rem;
+  font-size: 0.8rem;
+}
+
+/* استایل برای نمایش در موبایل */
+@media (max-width: 768px) {
+  .footer-content {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .footer-links {
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+  }
+}
+

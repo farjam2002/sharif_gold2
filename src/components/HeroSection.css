@@ -1,0 +1,46 @@
+
+
+import React from 'react';
+
+const HeroSection = () => {
+  return (
+<section className="relative h-screen flex items-center justify-center text-center overflow-hidden">
+{/* Background Video */}
+<video
+autoPlay
+loop
+muted
+playsInline // Important for mobile browser compatibility
+className="absolute top-0 left-0 w-full h-full object-cover z-0"
+src="/videos/hero-background.mp4" 
+>
+Your browser does not support the video tag.
+</video>
+
+{/* Dark Overlay for better text readability */}
+<div className="absolute top-0 left-0 w-full h-full bg-black bg-opacity-50 z-10"></div>
+
+{/* Content Layer */}
+<div className="relative z-20 px-4 text-white">
+<h1 
+className="text-5xl md:text-7xl font-extrabold mb-4"
+style={{ textShadow: '2px 2px 8px rgba(0, 0, 0, 0.7)' }}
+>
+شریف گلد: میراثی مدرن
+</h1>
+<p 
+className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto"
+style={{ textShadow: '1px 1px 4px rgba(0, 0, 0, 0.7)' }}
+>
+جایی که هنر اصیل ایرانی با نوآوری بی‌پایان هوش مصنوعی پیوند می‌خورد.
+</p>
+<button className="bg-brand-gold hover:bg-yellow-600 text-white font-bold py-3 px-8 rounded-lg text-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-lg">
+فرآیند طراحی را شروع کنید
+</button>
+</div>
+</section>
+  );
+};
+
+export default HeroSection;
+

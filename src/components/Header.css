@@ -1,0 +1,82 @@
+/* src/components/Header.css */
+.site-header {
+width: 100%;
+padding: calc(var(--spacing-unit) * 3) calc(var(--spacing-unit) * 5);
+border-bottom: 1px solid var(--color-secondary-accent);
+background-color: var(--color-background);
+position: sticky;
+top: 0;
+z-index: 100;
+}
+
+.header-container {
+display: flex;
+justify-content: space-between;
+align-items: center;
+max-width: 1600px;
+margin: 0 auto;
+}
+
+.header-logo {
+font-family: var(--font-primary);
+font-size: 1.5rem;
+font-weight: 600;
+letter-spacing: 2px;
+text-transform: uppercase;
+/* لوگو در وسط قرار میگیرد */
+position: absolute;
+left: 50%;
+transform: translateX(-50%);
+}
+
+.header-nav ul {
+display: flex;
+gap: calc(var(--spacing-unit) * 4);
+list-style: none;
+}
+
+.header-nav a {
+font-family: var(--font-secondary);
+font-size: 0.9rem;
+font-weight: 500;
+transition: color 0.3s ease;
+}
+
+.header-nav a:hover {
+color: var(--color-primary-accent);
+}
+
+.header-menu-icon,
+.header-actions {
+display: flex;
+align-items: center;
+gap: calc(var(--spacing-unit) * 2);
+}
+
+.header-actions svg, .header-menu-icon svg {
+cursor: pointer;
+}
+
+/* برای نمایش در موبایل، منوی اصلی را مخفی میکنیم. بعدا با جاوااسکریپت آن را مدیریت میکنیم */
+@media (max-width: 768px) {
+.header-nav {
+display: none;
+}
+.header-actions{
+/* در موبایل آیکون سرچ سمت راست میرود */
+}
+.header-logo {
+position: static;
+transform: none;
+margin: 0 auto;
+}
+.header-container {
+justify-content: space-between;
+}
+}
+
+@media (min-width: 769px) {
+.header-menu-icon {
+display: none; /* در دسکتاپ آیکون منو مخفی است */
+}
+}
