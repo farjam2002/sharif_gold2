@@ -1,267 +1,222 @@
 // File: src/pages/DesignStudioPage.jsx
-// FINAL VERSION – “Sharif Gold Metal Design Studio”
-// Focus: Only gold & silver pieces (no gems), luxury UX, ISO/mm size standards.
+// FINAL VERSION – Stage 2 removed, AI creation merged with Stage 1
+// Focus: full flow inside Stage 1 → preview (Stage 3)
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, useGLTF } from '@react-three/drei';
+import { OrbitControls, Environment, useGLTF } from '@react-three/drei';
 import Spinner from '../components/Spinner';
 import { useCart } from '../context/CartContext';
 import { aiDesignSamples } from '../data/mockData';
+import { generateAndDownloadSTL, generateAndDownloadDXF } from '../lib/convertToSTL';
+import { preload, suspend } from '../lib/suspendCache';
 
-// --- 3D Preview: appears only after confirmation ---
-const ARPreview = ({ modelPath }) => {
-  const { scene } = useGLTF(modelPath);
+// 🔁 پیش‌بارگذاری مدل موجود واقعی برای Test
+preload(useGLTF, ['/models/sample-ring.glb']);
+
+const ARPreview = ({ modelPath = '/models/sample-ring.glb' }) => {
+  const { scene } = suspend(useGLTF, [modelPath]);
   return (
-    <Canvas style={{ height: 360 }}>
-      <ambientLight intensity={0.7} />
-      <directionalLight position={[5, 5, 2]} intensity={1.1} />
-      <primitive object={scene} scale={1.2} />
-      <OrbitControls enablePan={false} />
+    <Canvas style={{ height: 420 }} camera={{ position: [0, 0.6, 2.2], fov: 45 }}>
+      <ambientLight intensity={0.6} />
+      <directionalLight intensity={1.2} position={[5, 5, 3]} />
+      <Suspense fallback={<Spinner />}>
+        <Environment preset="studio" />
+        <primitive object={scene} scale={4.8} position={[0, -0.4, 0]} />
+      </Suspense>
+      <OrbitControls autoRotate enablePan={false} enableZoom autoRotateSpeed={0.6} />
     </Canvas>
   );
 };
 
 const DesignStudioPage = () => {
   const { addToCart } = useCart();
+  const [step, setStep] = useState(1);
   const [material, setMaterial] = useState('gold');
-  const [userDescription, setUserDescription] = useState('');
   const [pieceType, setPieceType] = useState('');
+  const [userDescription, setUserDescription] = useState('');
   const [design, setDesign] = useState(null);
+  const [liveRate, setLiveRate] = useState({ gold: 3450000, silver: 65000, titanium: 220000 });
   const [selectedSize, setSelectedSize] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [confirmed, setConfirmed] = useState(false);
-  const [liveRate, setLiveRate] = useState({ gold: 3450000, silver: 65000 });
   const [finalPrice, setFinalPrice] = useState(null);
+  const [confirmed, setConfirmed] = useState(false);
 
-  // Live price fluctuation simulation
+  // نرخ زنده فلزات
   useEffect(() => {
     const interval = setInterval(() => {
       setLiveRate(prev => {
-        const fluctuate = v => v * (1 + (Math.random() * 0.05 - 0.025));
-        return { gold: fluctuate(prev.gold), silver: fluctuate(prev.silver) };
+        const fluctuate = v => v * (1 + (Math.random() * 0.04 - 0.02));
+        return {
+          gold: fluctuate(prev.gold),
+          silver: fluctuate(prev.silver),
+          titanium: fluctuate(prev.titanium)
+        };
       });
     }, 8000);
     return () => clearInterval(interval);
   }, []);
 
-  const generateAIDesign = () => {
-    if (!userDescription || !pieceType) {
-      return alert('لطفاً نوع قطعه و توصیف الهام خود را وارد کنید.');
-    }
-    setIsLoading(true);
-    setTimeout(() => {
+  // ✨ تولید خودکار طرح AI در مرحله ۱
+  useEffect(() => {
+    if (step === 1 && pieceType && userDescription && design === null) {
       const sample = aiDesignSamples[Math.floor(Math.random() * aiDesignSamples.length)];
       setDesign(sample);
-      setIsLoading(false);
-    }, 2500);
-  };
+      setStep(3); // مستقیماً به مرحله ۳ منتقل شود
+    }
+  }, [pieceType, userDescription]);
 
   const calculateFinalPrice = () => {
-    let referenceSize_mm = 56;
-    let baseWeight_grams = 12;
-
+    if (!selectedSize) return alert('لطفاً ابعاد قطعه را وارد کنید.');
+    let ref = 50, baseWeight = 10;
     switch (pieceType) {
-      case 'necklace':
-        referenceSize_mm = 450; baseWeight_grams = 25; break;
-      case 'bracelet':
-        referenceSize_mm = 175; baseWeight_grams = 18; break;
-      case 'earpiece':
-        referenceSize_mm = 25; baseWeight_grams = 8; break;
-      default:
-        break;
+      case 'panel': ref = 80; baseWeight = 15; break;
+      case 'brace': ref = 180; baseWeight = 20; break;
+      case 'ornament': ref = 40; baseWeight = 8; break;
     }
-
     const metalRate = liveRate[material];
-    const sizeFactor = selectedSize / referenceSize_mm;
-    const fluctuate = 1 + (Math.random() * 0.05 - 0.025);
-    const price = metalRate * baseWeight_grams * sizeFactor * fluctuate;
+    const price = metalRate * baseWeight * (selectedSize / ref) * (1 + (Math.random() * 0.04 - 0.02));
     setFinalPrice(Math.round(price / 1000) * 1000);
   };
 
   const confirmAndAddToCart = () => {
-    const productObj = {
-      id: `ai-${Date.now()}`,
-      name: design?.name || 'قطعه فلزی سفارشی شما',
+    if (!finalPrice) return alert('لطفاً ابتدا قیمت را محاسبه کنید.');
+    const product = {
+      id: `metal-${Date.now()}`,
+      name: design?.name || 'طرح فلزی سفارشی',
       image: design?.image || '/images/ai-placeholder.jpg',
-      description: userDescription,
-      pieceType,
       material,
-      size_mm: selectedSize,
+      pieceType,
+      size: selectedSize,
       price: `${finalPrice.toLocaleString('fa-IR')} تومان`,
+      description: userDescription
     };
-    addToCart(productObj);
+    addToCart(product);
     setConfirmed(true);
   };
 
   return (
-    <div
-      className={`min-h-screen py-20 px-6 transition-colors duration-700 ${
-        material === 'gold' ? 'bg-[#1A120B]' : 'bg-[#101010]'
-      }`}
-    >
+    <div className={`min-h-screen py-16 px-6 transition-colors duration-700 ${
+      material === 'gold'
+        ? 'bg-[#1A120B]'
+        : material === 'silver'
+        ? 'bg-[#101010]'
+        : 'bg-[#0D0D0E]'
+    }`}>
       <div className="max-w-5xl mx-auto text-center">
-        <h1 className="font-cormorant text-4xl text-accent-gold mb-8">
-          استودیوی طراحی فلز خالص
-        </h1>
-        <p className="text-gray-300 mb-10 leading-7 font-vazirmatn">
-          توصیف خود را بنویسید تا هوش مصنوعی، قطعه‌ای منحصربه‌فرد بر اساس الهام شما خلق کند.
-        </p>
+        <h1 className="font-cormorant text-4xl text-accent-gold mb-6">استودیوی طراحی فلز خالص</h1>
 
-        {/* Piece type selection */}
-        <div className="mb-6">
-          <label className="block text-sm text-gray-300 mb-2">نوع قطعه فلزی:</label>
-          <select
-            value={pieceType}
-            onChange={(e) => setPieceType(e.target.value)}
-            className="w-full sm:w-1/2 mx-auto rounded-md bg-surface border border-accent-gold px-3 py-2 text-gray-100"
-          >
-            <option value="">-- انتخاب نوع قطعه --</option>
-            <option value="ring">حلقه</option>
-            <option value="necklace">گردن‌آویز</option>
-            <option value="bracelet">دست‌بند</option>
-            <option value="earpiece">گوشواره فلزی</option>
-          </select>
-        </div>
+        {/* ----- مرحله ۱: ورودی ----- */}
+        {step === 1 && (
+          <>
+            <p className="text-gray-400 mb-4 font-vazirmatn">انتخاب نوع فلز و توضیح الهام طراحی:</p>
 
-        {/* Description */}
-        <textarea
-          className="w-full p-4 rounded-md bg-surface border border-accent-gold text-gray-100 mb-6 focus:ring-2 focus:ring-accent-gold"
-          rows="4"
-          placeholder="الهام یا احساس خود را برای طراحی قطعه بنویسید..."
-          value={userDescription}
-          onChange={(e) => setUserDescription(e.target.value)}
-        />
-
-        {/* Material Selection */}
-        <div className="mb-6">
-          <label className="block text-sm text-gray-300 mb-2">انتخاب فلز پایه:</label>
-          <div className="flex justify-center space-x-4 rtl:space-x-reverse">
-            <button
-              className={`px-6 py-2 border rounded-md font-semibold transition-all ${
-                material === 'gold'
-                  ? 'bg-accent-gold text-background border-accent-gold'
-                  : 'border-gray-500 text-gray-300 hover:border-accent-gold'
-              }`}
-              onClick={() => setMaterial('gold')}
-            >
-              طلا
-            </button>
-            <button
-              className={`px-6 py-2 border rounded-md font-semibold transition-all ${
-                material === 'silver'
-                  ? 'bg-gray-400 text-background border-gray-300'
-                  : 'border-gray-500 text-gray-300 hover:border-gray-400'
-              }`}
-              onClick={() => setMaterial('silver')}
-            >
-              نقره
-            </button>
-          </div>
-        </div>
-
-        {/* Generate AI Design */}
-        <button
-          onClick={generateAIDesign}
-          className="mt-4 px-8 py-3 font-bold border border-accent-gold text-accent-gold rounded-md hover:bg-accent-gold hover:text-background transition-all"
-        >
-          خلق طرح فلزی هوشمند
-        </button>
-
-        {/* Spinner */}
-        {isLoading && (
-          <div className="mt-8 flex justify-center">
-            <Spinner />
-          </div>
-        )}
-
-        {/* AI Output */}
-        {design && !confirmed && (
-          <div className="mt-12 text-center">
-            <img
-              src={design.image}
-              alt={design.name}
-              className="w-72 h-72 mx-auto object-cover rounded-lg shadow-lg"
-            />
-            <h3 className="font-cormorant text-2xl text-accent-gold mt-6">{design.name}</h3>
-
-            {/* Size selection */}
-            <div className="mt-10">
-              <label className="block text-sm text-gray-300 mb-2">انتخاب سایز بر اساس استاندارد میلی‌متر:</label>
-              <select
-                value={selectedSize}
-                onChange={(e) => setSelectedSize(Number(e.target.value))}
-                className="w-full sm:w-1/2 mx-auto rounded-md bg-surface border border-accent-gold px-3 py-2 text-gray-100"
-              >
-                <option value="">-- انتخاب سایز --</option>
-                {pieceType === 'ring' && (
-                  <>
-                    <option value="52">52 mm — سایز 6</option>
-                    <option value="54">54 mm — سایز 7</option>
-                    <option value="56">56 mm — سایز 8</option>
-                    <option value="58">58 mm — سایز 9</option>
-                    <option value="60">60 mm — سایز 10</option>
-                  </>
-                )}
-                {pieceType === 'bracelet' && (
-                  <>
-                    <option value="160">160 mm — زنانه ظریف</option>
-                    <option value="175">175 mm — کلاسیک</option>
-                    <option value="200">200 mm — مردانه</option>
-                  </>
-                )}
-                {pieceType === 'necklace' && (
-                  <>
-                    <option value="450">450 mm — پرنسس</option>
-                    <option value="600">600 mm — اپرا</option>
-                    <option value="900">900 mm — روپی</option>
-                  </>
-                )}
-                {pieceType === 'earpiece' && (
-                  <>
-                    <option value="20">20 mm — کوچک</option>
-                    <option value="30">30 mm — متوسط</option>
-                    <option value="45">45 mm — بلند</option>
-                  </>
-                )}
-              </select>
+            <div className="flex justify-center gap-3 mb-4">
+              {['gold', 'silver', 'titanium'].map(met => (
+                <button
+                  key={met}
+                  onClick={() => setMaterial(met)}
+                  className={`px-5 py-2 rounded-md font-semibold border ${material === met ? 'bg-accent-gold text-black border-accent-gold' : 'border-gray-500 text-gray-300 hover:border-accent-gold'}`}
+                >
+                  {met === 'gold' ? 'طلا' : met === 'silver' ? 'نقره' : 'تیتانیوم'}
+                </button>
+              ))}
             </div>
 
-            {/* Pricing */}
-            {selectedSize && (
-              <div className="mt-8">
-                <button
-                  onClick={calculateFinalPrice}
-                  className="px-8 py-3 border border-accent-gold text-accent-gold hover:bg-accent-gold hover:text-background rounded-md transition-all"
-                >
-                  محاسبه قیمت لحظه‌ای
-                </button>
-              </div>
-            )}
+            {/* نوع قطعه */}
+            <select
+              value={pieceType}
+              onChange={e => setPieceType(e.target.value)}
+              className="w-full sm:w-1/2 mx-auto rounded-md bg-surface border border-accent-gold text-gray-100 px-3 py-2 mb-4"
+            >
+              <option value="">-- نوع قطعه --</option>
+              <option value="panel">صفحه</option>
+              <option value="brace">بند فلزی</option>
+              <option value="ornament">تزئینات فنی</option>
+            </select>
 
-            {finalPrice && (
-              <div className="mt-6 bg-black/40 text-gray-100 p-6 rounded-lg w-full sm:w-2/3 mx-auto border border-accent-gold">
-                <p className="text-lg font-vazirmatn mb-3">قیمت نهایی بر اساس نوع، سایز و فلز پایه:</p>
-                <p className="text-3xl font-cormorant text-accent-gold mb-4">
-                  {finalPrice.toLocaleString('fa-IR')} تومان
-                </p>
-                <button
-                  onClick={confirmAndAddToCart}
-                  className="px-10 py-3 bg-accent-gold text-background font-bold rounded-md hover:scale-105 transition-all"
-                >
-                  تأیید و افزودن به سبد
-                </button>
-              </div>
-            )}
-          </div>
+            {/* توضیح */}
+            <textarea
+              className="w-full rounded-md bg-surface border border-accent-gold text-gray-100 p-4 mb-4"
+              rows="3"
+              placeholder="توضیح یا الهام طراحی..."
+              value={userDescription}
+              onChange={e => setUserDescription(e.target.value)}
+            />
+          </>
         )}
 
-        {/* AR Preview */}
-        {confirmed && design && (
-          <div className="mt-16 text-center">
-            <h2 className="text-3xl font-cormorant text-accent-gold mb-4">پیش‌نمایش سه‌بعدی قطعه تأیید‌شده</h2>
+        {/* ----- مرحله ۳: نمایش سه‌بعدی ----- */}
+        {step === 3 && design && (
+          <>
+            <p className="text-gray-300 mb-6 font-vazirmatn">نمای سه‌بعدی قطعه فلزی شما:</p>
             <ARPreview modelPath="/models/sample-ring.glb" />
-          </div>
+            <button
+              onClick={() => setStep(4)}
+              className="mt-8 px-8 py-3 font-bold border border-accent-gold text-accent-gold rounded-md hover:bg-accent-gold hover:text-black transition-all"
+            >
+              ادامه به تعیین ابعاد
+            </button>
+          </>
+        )}
+
+        {/* ----- مرحله ۴: سایز و قیمت ----- */}
+        {step === 4 && (
+          <>
+            <input
+              type="number"
+              className="rounded-md px-4 py-2 bg-surface border border-accent-gold text-gray-100 w-1/2 mx-auto mb-4"
+              value={selectedSize}
+              onChange={e => setSelectedSize(e.target.value)}
+              placeholder="ابعاد (میلی‌متر)"
+            />
+            <button
+              onClick={calculateFinalPrice}
+              className="px-8 py-3 border border-accent-gold text-accent-gold rounded-md hover:bg-accent-gold hover:text-black transition-all"
+            >
+              محاسبه قیمت
+            </button>
+            {finalPrice && (
+              <div className="mt-6 text-accent-gold text-lg font-semibold">
+                قیمت نهایی: {finalPrice.toLocaleString('fa-IR')} تومان
+              </div>
+            )}
+            <button
+              onClick={() => setStep(5)}
+              className="mt-6 px-8 py-3 border border-accent-gold text-accent-gold rounded-md hover:bg-accent-gold hover:text-black transition-all"
+            >
+              نهایی‌سازی سفارش
+            </button>
+          </>
+        )}
+
+        {/* ----- مرحله ۵: خروجی و تأیید ----- */}
+        {step === 5 && (
+          <>
+            <ARPreview modelPath="/models/sample-ring.glb" />
+            <div className="mt-6 space-x-4 rtl:space-x-reverse">
+              <button
+                onClick={() => generateAndDownloadSTL()}
+                className="px-6 py-2 border border-accent-gold text-accent-gold rounded-md hover:bg-accent-gold hover:text-black"
+              >
+                خروجی STL
+              </button>
+              <button
+                onClick={() => generateAndDownloadDXF()}
+                className="px-6 py-2 border border-accent-gold text-accent-gold rounded-md hover:bg-accent-gold hover:text-black"
+              >
+                خروجی DXF
+              </button>
+            </div>
+            <button
+              onClick={confirmAndAddToCart}
+              className="mt-6 px-8 py-3 border border-accent-gold text-accent-gold rounded-md hover:bg-accent-gold hover:text-black"
+            >
+              افزودن به سبد سفارش
+            </button>
+            {confirmed && (
+              <p className="mt-6 text-green-400 font-vazirmatn">✅ طرح فلزی شما با موفقیت ثبت شد.</p>
+            )}
+          </>
         )}
       </div>
     </div>
